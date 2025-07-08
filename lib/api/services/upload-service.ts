@@ -1,4 +1,5 @@
 import { UploadClient } from '../clients/upload-client';
+import { supabase } from '@/lib/supabase';
 
 export interface UploadImageRequest {
   userId: string;
@@ -26,6 +27,28 @@ export class UploadService {
     }
 
     return response.data;
+  }
+
+  /**
+   * Generate a signed URL for an existing face image
+   */
+  static async getSignedImageUrl(imageUrl: string): Promise<string> {
+    try {
+      // Extract file path from the stored URL
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      // Generate signed URL
+      const { data, error } = await supabase.storage.from('face-images').createSignedUrl(fileName, 60 * 60 * 24 * 7); // 7 days expiry
+      if (error || !data?.signedUrl) {
+        console.error('Error generating signed URL:', error);
+        return imageUrl; // Fallback to original URL
+      }
+
+      return data.signedUrl;
+    } catch (error) {
+      console.error('Error generating signed URL:', error);
+      return imageUrl; // Fallback to original URL
+    }
   }
 
   /**
